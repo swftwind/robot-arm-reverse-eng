@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robot manipulator – Checkpoint 1 block model</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f6f6f3; --panel:#ffffff; --ink:#1c1d21; --muted:#667; --line:#dcdde2;
+  --meas:#0b7285; --assumed:#8a8f9c; --sel:#e8590c; --grid:#c4c7cf; --canvas:#fbfbfa; --chip:#eef1f4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121316; --panel:#1b1d22; --ink:#e8e9ec; --muted:#9a9eab; --line:#2e3037;
+    --meas:#3bc9db; --assumed:#7d8392; --sel:#ff922b; --grid:#3a3d46; --canvas:#16181c; --chip:#262932;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121316; --panel:#1b1d22; --ink:#e8e9ec; --muted:#9a9eab; --line:#2e3037;
+  --meas:#3bc9db; --assumed:#7d8392; --sel:#ff922b; --grid:#3a3d46; --canvas:#16181c; --chip:#262932;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+h2{font-size:15px;margin:0 0 8px}
+.sub{margin:0 0 14px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.viewer{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+.toolbar,.poses{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.toolbar .lbl,.poses .lbl{color:var(--muted);font-size:12px;margin-right:2px}
+button{font:inherit;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:7px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--meas)}
+button.on{border-color:var(--sel);color:var(--sel)}
+canvas{display:block;width:100%;aspect-ratio:4/3;min-height:340px;background:var(--canvas);border-radius:8px;
+  cursor:grab;touch-action:none}
+canvas:active{cursor:grabbing}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px;color:var(--muted);font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:26px;height:0;border-top:2px solid var(--meas)}
+.sw.d{border-top:2px dashed var(--assumed)}
+.sw.s{border-top:3px solid var(--sel)}
+.sliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
+@media (max-width:600px){.sliders{grid-template-columns:1fr}}
+.sliders label{display:block;font-size:12px;color:var(--muted)}
+.sliders input{width:100%}
+.sliders b{color:var(--ink);font-weight:600}
+dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+dt{color:var(--muted)}
+dd{margin:0}
+dd small{display:block;color:var(--muted)}
+.chip{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;background:var(--chip)}
+.chip.meas{color:var(--meas)} .chip.assumed{color:var(--muted)}
+.muted{color:var(--muted)}
+.part{display:flex;align-items:center;gap:8px;padding:3px 0}
+.part button{flex:1;text-align:left;border:0;background:none;padding:2px 4px;border-radius:5px}
+.part button.on{background:var(--chip);color:var(--sel)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+tr.grp td{background:var(--chip);font-weight:600;font-size:12px;letter-spacing:.02em}
+td.n{white-space:nowrap}
+.notes ul{margin:6px 0 0;padding-left:18px}
+.notes li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Robot manipulator — Checkpoint 1 block model</h1>
+  <p class="sub">Wireframe built from the four annotated frames, re-measured with one shared scale. Drag to orbit, scroll to zoom, click a part for its dimensions.</p>
+
+  <div class="grid">
+    <section class="viewer">
+      <div class="toolbar">
+        <span class="lbl">Camera</span>
+        <button data-view="A">Side A (frames 1·3·4)</button>
+        <button data-view="B">Side B (frame 2)</button>
+        <button data-view="T">Top</button>
+        <button data-view="3D">3D</button>
+      </div>
+      <div class="poses">
+        <span class="lbl">Pose</span>
+        <button data-pose="f3">Frame 3</button>
+        <button data-pose="f4">Frame 4</button>
+        <button data-pose="f1">Frame 1</button>
+        <button data-pose="f2">Frame 2</button>
+      </div>
+      <canvas id="cv" aria-label="3D wireframe of the robot manipulator on its optical plate"></canvas>
+      <div class="legend">
+        <span><i class="sw"></i>from your measurements</span>
+        <span><i class="sw d"></i>assumed / placeholder</span>
+        <span><i class="sw s"></i>selected</span>
+      </div>
+      <div class="sliders">
+        <label>Base yaw <b id="vYaw">0°</b><input id="sYaw" type="range" min="-180" max="180" value="0"></label>
+        <label>Upper arm angle <b id="vU">131°</b><input id="sU" type="range" min="0" max="360" value="131"></label>
+        <label>Forearm angle <b id="vF">250°</b><input id="sF" type="range" min="0" max="360" value="250"></label>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card" id="info"></div>
+      <div class="card">
+        <h2>Parts</h2>
+        <div id="parts"></div>
+        <label class="part"><input type="checkbox" id="showAssumed" checked> <span>Show assumed parts</span></label>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card">
+    <h2>Consolidated measurements (mm)</h2>
+    <div class="tablewrap"><table id="tbl"></table></div>
+  </section>
+
+  <section class="card notes">
+    <h2>Read this before trusting a number</h2>
+    <ul>
+      <li><b>In-plane (X–Z) dimensions are the solid ones.</b> Depth (Y) layering — which plate sits where, and which side the motors are on — is assumed. Frame 2 suggests the stack motor | upper link | 18.5 mm hub | forearm at the elbow, but it can't say which way round it faces. A top-down or ~45° frame would settle it.</li>
+      <li><b>One scale for everything:</b> 3.19 px/mm (five clicks on the 25 mm hole pitch, ±1.5%). Anything not on the plate's depth plane can be off by a few percent.</li>
+      <li><b>Outliers excluded:</b> frame 1 bracket height (clicked short of the top) and frame 3 forearm "80.3" (line starts at the elbow pivot, not the slot end).</li>
+      <li><b>Plate:</b> 200 × 200 is nominal (8 × 8 holes at 25 mm). The front edge measures 206.8 mm raw only because it is closer to the camera. Hole diameter, plate thickness, and the plate's depth were not measurable.</li>
+      <li><b>Mounting:</b> the base axis lands at the centre of a 25 mm hole square, which hints at a bolt pattern through nearby plate holes. Check the video for how the base is actually fastened.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const rad=Math.PI/180;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ---------- dimensions (mm) ---------- */
+const D={
+  plateW:200, plateT0:12.7, robotX:125,
+  puckD:38.2, puckH:16.2, flangeT:4.6, gap:1.2,
+  plateT:5.7, turretH:33.7, turretWx:61.6, turretWy:39.8,
+  yawD:30.4, yawH:21.1, bracketH:90.2, bracketT:4.7, shoulderZ:94.8,
+  ringD:62.4, hubD:27.0, pcdD:37.6, motorL:40.1, hubL:18.5, hubOD:37.6,
+  linkT:4.7, linkW:27.1, L1:99.4, L2:103.8,
+  slotUp:65.7, slotFore:61.7, slotForeOff:22.0, slotW:5.1, tipD:12.9, cbD:10.3, holeD:6
+};
+
+/* ---------- geometry helpers: a segment is [[x,y,z],[x,y,z]] ---------- */
+function box(x0,x1,y0,y1,z0,z1){
+  const p=[];for(const x of[x0,x1])for(const y of[y0,y1])for(const z of[z0,z1])p.push([x,y,z]);
+  return[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]].map(([i,j])=>[p[i],p[j]]);
+}
+function circZ(cx,cy,z,r,n=40){const s=[];for(let i=0;i<n;i++){const a=i/n*2*Math.PI,b=(i+1)/n*2*Math.PI;
+  s.push([[cx+r*Math.cos(a),cy+r*Math.sin(a),z],[cx+r*Math.cos(b),cy+r*Math.sin(b),z]]);}return s;}
+function cylZ(cx,cy,z0,z1,r,n=40,rails=8){const s=[...circZ(cx,cy,z0,r,n),...circZ(cx,cy,z1,r,n)];
+  for(let k=0;k<rails;k++){const a=k/rails*2*Math.PI;s.push([[cx+r*Math.cos(a),cy+r*Math.sin(a),z0],[cx+r*Math.cos(a),cy+r*Math.sin(a),z1]]);}return s;}
+function circY(cx,cz,y,r,n=40){const s=[];for(let i=0;i<n;i++){const a=i/n*2*Math.PI,b=(i+1)/n*2*Math.PI;
+  s.push([[cx+r*Math.cos(a),y,cz+r*Math.sin(a)],[cx+r*Math.cos(b),y,cz+r*Math.sin(b)]]);}return s;}
+function cylY(cx,cz,y0,y1,r,n=40,rails=8){const s=[...circY(cx,cz,y0,r,n),...circY(cx,cz,y1,r,n)];
+  for(let k=0;k<rails;k++){const a=k/rails*2*Math.PI;s.push([[cx+r*Math.cos(a),y0,cz+r*Math.sin(a)],[cx+r*Math.cos(a),y1,cz+r*Math.sin(a)]]);}return s;}
+/* stadium outline in the X–Z plane: starts at O, runs length L along angle th, half-width r, at depth y */
+function stadPts(O,th,L,r,y,n=14){
+  const U=[Math.cos(th),Math.sin(th)],V=[-Math.sin(th),Math.cos(th)];
+  const P=(u,v)=>[O[0]+u*U[0]+v*V[0],y,O[2]+u*U[1]+v*V[1]];
+  const pts=[];
+  for(let i=0;i<=n;i++){const a=Math.PI/2+Math.PI*i/n;pts.push(P(r*Math.cos(a),r*Math.sin(a)));}
+  for(let i=0;i<=n;i++){const a=-Math.PI/2+Math.PI*i/n;pts.push(P(L+r*Math.cos(a),r*Math.sin(a)));}
+  return pts;
+}
+const loop=pts=>pts.map((p,i)=>[p,pts[(i+1)%pts.length]]);
+function linkSegs(O,th,L,r,y0,y1,n=14){
+  const a=stadPts(O,th,L,r,y0,n),b=stadPts(O,th,L,r,y1,n),s=[...loop(a),...loop(b)];
+  for(const i of[0,n,n+1,2*n+1])s.push([a[i],b[i]]);return s;
+}
+function slotSegs(O,th,u0,len,w,y){
+  const U=[Math.cos(th),Math.sin(th)],r=w/2;
+  const Oc=[O[0]+(u0+r)*U[0],0,O[2]+(u0+r)*U[1]];
+  return loop(stadPts(Oc,th,len-w,r,y,8));
+}
+
+/* ---------- part metadata ---------- */
+const META=[
+ {id:'plate',name:'Optical plate',conf:'assumed',rot:false,faint:false,info:[
+   ['Size','200 × 200 × 12.7','nominal: 8 × 8 holes at 25 mm; front edge reads 206.8 raw (nearer the camera)'],
+   ['Hole pitch','25','your reference; 5 clicks, 78–81 px'],
+   ['Robot axis','125 from left edge','from puck centre (n=1); depth position assumed centred']]},
+ {id:'holes',name:'Plate holes (8 × 8)',conf:'assumed',rot:false,faint:true,info:[
+   ['Grid','8 × 8 at 25 pitch, 12.5 edge margin','counted in the frame'],
+   ['Hole Ø','6 (M6 tapped?)','not measurable from these frames']]},
+ {id:'cbores',name:'Mounting counterbores',conf:'meas',rot:false,faint:false,info:[
+   ['Ø','10.3','n=1 (frame 4); fits an M6 socket-head counterbore'],
+   ['Position','25 from each plate edge','read off the frame, approximate']]},
+ {id:'puck',name:'Base puck (fixed)',conf:'meas',rot:false,faint:false,info:[
+   ['Ø','38.2','n=1 (frame 1)'],
+   ['Height','16.2','n=3, range 14.4–17.9 — depends on where the plate surface was clicked']]},
+ {id:'flange',name:'Yaw bearing flange',conf:'meas',rot:true,faint:false,info:[
+   ['Thickness','4.6','n=3, range 4.1–5.0'],
+   ['Ø','61.6','taken equal to turret width (inferred)']]},
+ {id:'turret',name:'Turret / yaw yoke',conf:'meas',rot:true,faint:false,info:[
+   ['Width X','61.6','n=2, range 60.1–63.0'],
+   ['Width Y','39.8','n=1 (frame 2 top plate)'],
+   ['Base plate','5.7','n=3, range 5.0–6.0'],
+   ['Clear height','33.7','n=3, range 33.5–34.2; plus plate = 39.4, independent frame-1 value 39.2']]},
+ {id:'yaw',name:'Yaw actuator',conf:'meas',rot:true,faint:false,info:[
+   ['Ø','30.4','n=1 (frame 4)'],
+   ['Height','21.1','n=2, range 21.0–21.3']]},
+ {id:'bracket',name:'Shoulder bracket plate',conf:'assumed',rot:true,faint:false,info:[
+   ['Height','90.2','n=2, range 89.6–90.9 (frame 1 excluded)'],
+   ['Width / thickness / depth','61.6 / 4.7 / back side','assumed']]},
+ {id:'shoulder',name:'Shoulder actuator housing',conf:'assumed',rot:true,faint:false,info:[
+   ['Ø','62.4','n=4 radius clicks, Ø 56.8–65.2'],
+   ['Axis height','94.8','n=2 (94.6 / 94.9)'],
+   ['Length','40.1','reused from the elbow motor (n=1) — assumed']]},
+ {id:'upper',name:'Upper arm link',conf:'meas',rot:true,faint:false,info:[
+   ['Centre-to-centre','99.4','n=2: 98.6 (frame 1), 100.2 (frame 3)'],
+   ['Width / thickness','27.1 / 4.7','n=1 / n=2 (thickness from frame 2, edge-on)'],
+   ['Slot','65.7 × 5.1','n=3, length 63.3–69.0'],
+   ['Hub Ø / bolt circle Ø','27.0 / 37.6','n=2 each']]},
+ {id:'elbow',name:'Elbow actuator housing',conf:'assumed',rot:true,faint:false,info:[
+   ['Ø','62.4','same ring size as the shoulder'],
+   ['Length','40.1','n=1 (frame 2); placed behind the upper link — assumed']]},
+ {id:'hub',name:'Elbow output hub',conf:'assumed',rot:true,faint:false,info:[
+   ['Length','18.5','n=1 (frame 2): gap between upper link and forearm'],
+   ['Ø','37.6','set equal to the bolt circle']]},
+ {id:'fore',name:'Forearm link',conf:'meas',rot:true,faint:false,info:[
+   ['Elbow → tip','103.8','n=2: 103.5 (frame 1), 104.1 (frame 4)'],
+   ['Width','27.1','assumed equal to upper arm'],
+   ['Slot','61.7 × 5.1','n=2, length 60.5–63.0; starts ~22 from elbow'],
+   ['Tip hole Ø','12.9','n=2 (12.9 and 12.9)']]}
+];
+
+/* ---------- build geometry ---------- */
+const state={yaw:0,u:131,f:250,sel:null,hidden:new Set(),showAssumed:true};
+const STATIC={};
+(function(){
+  STATIC.plate=box(-D.robotX,D.plateW-D.robotX,-D.plateW/2,D.plateW/2,-D.plateT0,0);
+  const h=[];for(let i=0;i<8;i++)for(let j=0;j<8;j++)h.push(...circZ(-D.robotX+12.5+25*i,-D.plateW/2+12.5+25*j,0,D.holeD/2,10));
+  STATIC.holes=h;
+  const c=[];for(const x of[-D.robotX+25,-D.robotX+175])for(const y of[-75,75])c.push(...circZ(x,y,0,D.cbD/2,20));
+  STATIC.cbores=c;
+  STATIC.puck=cylZ(0,0,0,D.puckH,D.puckD/2,40,8);
+})();
+
+function build(){
+  const th1=state.u*rad,th2=state.f*rad;
+  const S=[0,0,D.shoulderZ];
+  const E=[D.L1*Math.cos(th1),0,S[2]+D.L1*Math.sin(th1)];
+  const T=[E[0]+D.L2*Math.cos(th2),0,E[2]+D.L2*Math.sin(th2)];
+  const z0=D.puckH,z1=z0+D.flangeT,zt0=z1+D.gap,zpl=zt0+D.plateT,ztop=zpl+D.turretH;
+  const hw=D.turretWx/2,hd=D.turretWy/2,r=D.linkW/2,R=D.ringD/2;
+  const yB1=hd,yB0=yB1-D.bracketT,yM1=yB0,yM0=yM1-D.motorL,yU1=yM0,yU0=yU1-D.linkT,yH1=yU0,yH0=yH1-D.hubL,yF1=yH0,yF0=yF1-D.linkT;
+  const m=Object.assign({},STATIC);
+  m.flange=cylZ(0,0,z0,z1,hw,48,8);
+  m.turret=[...box(-hw,hw,-hd,hd,zt0,ztop),...box(-hw,hw,-hd,hd,zt0,zpl)];
+  m.yaw=cylZ(0,0,ztop-D.yawH,ztop,D.yawD/2,32,6);
+  const bz0=z1+0.8;m.bracket=box(-hw,hw,yB0,yB1,bz0,bz0+D.bracketH);
+  m.shoulder=cylY(S[0],S[2],yM0,yM1,R,48,10);
+  m.upper=[...linkSegs(S,th1,D.L1,r,yU0,yU1),
+    ...slotSegs(S,th1,(D.L1-D.slotUp)/2,D.slotUp,D.slotW,yU0),
+    ...circY(S[0],S[2],yU0,D.hubD/2,24),...circY(E[0],E[2],yU0,D.hubD/2,24),
+    ...circY(S[0],S[2],yU0,D.pcdD/2,24),...circY(E[0],E[2],yU0,D.pcdD/2,24)];
+  m.elbow=cylY(E[0],E[2],yM0,yM1,R,48,10);
+  m.hub=cylY(E[0],E[2],yH0,yH1,D.hubOD/2,32,8);
+  m.fore=[...linkSegs(E,th2,D.L2,r,yF0,yF1),
+    ...slotSegs(E,th2,D.slotForeOff,D.slotFore,D.slotW,yF0),
+    ...circY(E[0],E[2],yF0,D.hubD/2,24),...circY(T[0],T[2],yF0,D.tipD/2,20)];
+  return META.map(mt=>Object.assign({},mt,{segs:m[mt.id]}));
+}
+let comps=build();
+
+/* ---------- canvas, camera ---------- */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+let W=0,H=0,baseScale=2;
+const cam={az:-0.55,el:0.3,zoom:1,tx:-25,ty:0,tz:80};
+let hit=[];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function resize(){
+  const r=cv.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);W=r.width;H=r.height;
+  baseScale=Math.min(W/330,H/250);draw();
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const C={meas:css('--meas'),ass:css('--assumed'),sel:css('--sel'),grid:css('--grid'),ink:css('--ink'),muted:css('--muted')};
+  const yc=Math.cos(state.yaw*rad),ys=Math.sin(state.yaw*rad);
+  const ca=Math.cos(cam.az),sa=Math.sin(cam.az),ce=Math.cos(cam.el),se=Math.sin(cam.el),sc=baseScale*cam.zoom;
+  const P=(p,rot)=>{let x=p[0],y=p[1],z=p[2];
+    if(rot){const nx=x*yc-y*ys,ny=x*ys+y*yc;x=nx;y=ny;}
+    x-=cam.tx;y-=cam.ty;z-=cam.tz;
+    const x1=x*ca-y*sa,y1=x*sa+y*ca;
+    return[W/2+sc*x1,H/2-sc*(y1*se+z*ce)];};
+  hit=[];
+  for(const c of comps){
+    if(state.hidden.has(c.id))continue;
+    if(c.conf==='assumed'&&!state.showAssumed)continue;
+    const isSel=state.sel===c.id,arr=[];
+    ctx.beginPath();
+    let minx=1e9,maxx=-1e9,miny=1e9;
+    for(const[a,b]of c.segs){
+      const p=P(a,c.rot),q=P(b,c.rot);
+      ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);arr.push(p[0],p[1],q[0],q[1]);
+      minx=Math.min(minx,p[0],q[0]);maxx=Math.max(maxx,p[0],q[0]);miny=Math.min(miny,p[1],q[1]);
+    }
+    ctx.lineWidth=isSel?2.4:(c.faint?0.8:1.3);
+    ctx.strokeStyle=isSel?C.sel:(c.faint?C.grid:(c.conf==='meas'?C.meas:C.ass));
+    ctx.setLineDash(c.conf==='assumed'?[5,4]:[]);
+    ctx.stroke();ctx.setLineDash([]);
+    hit.push({id:c.id,arr});
+    if(isSel){ctx.fillStyle=C.sel;ctx.font='600 12px system-ui,sans-serif';ctx.textAlign='center';
+      ctx.fillText(c.name,(minx+maxx)/2,Math.max(14,miny-8));}
+  }
+  /* scale bar = one plate hole pitch */
+  const bx=W-24-25*sc,by=H-20;
+  ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx+25*sc,by);
+  ctx.moveTo(bx,by-4);ctx.lineTo(bx,by+4);ctx.moveTo(bx+25*sc,by-4);ctx.lineTo(bx+25*sc,by+4);ctx.stroke();
+  ctx.fillStyle=C.muted;ctx.font='11px system-ui,sans-serif';ctx.textAlign='center';
+  ctx.fillText('25 mm (hole pitch)',bx+12.5*sc,by-8);
+  /* axis triad */
+  const ox=34,oy=H-34,len=24;
+  [['X',[1,0,0]],['Y',[0,1,0]],['Z',[0,0,1]]].forEach(([n,v])=>{
+    const x1=v[0]*ca-v[1]*sa,y1=v[0]*sa+v[1]*ca,sx=ox+len*x1,sy=oy-len*(y1*se+v[2]*ce);
+    ctx.strokeStyle=C.muted;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(sx,sy);ctx.stroke();
+    ctx.fillStyle=C.muted;ctx.font='11px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText(n,ox+(len+8)*x1,oy-(len+8)*(y1*se+v[2]*ce)+4);
+  });
+}
+
+/* ---------- interaction ---------- */
+let drag=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,moved:0};});
+cv.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;drag.moved+=Math.abs(dx)+Math.abs(dy);
+  cam.az+=dx*0.008;cam.el=clamp(cam.el+dy*0.008,-0.3,Math.PI/2);setViewActive(null);draw();
+});
+cv.addEventListener('pointerup',e=>{if(drag&&drag.moved<5)pick(e);drag=null;});
+cv.addEventListener('wheel',e=>{e.preventDefault();cam.zoom=clamp(cam.zoom*Math.exp(-e.deltaY*0.0012),0.5,4);draw();},{passive:false});
+
+function pick(e){
+  const r=cv.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top;
+  let best=null,bd=10;
+  for(const h of hit){const a=h.arr;
+    for(let i=0;i<a.length;i+=4){
+      const d=segDist(px,py,a[i],a[i+1],a[i+2],a[i+3]);
+      if(d<bd){bd=d;best=h.id;}
+    }}
+  select(best);
+}
+function segDist(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,l=dx*dx+dy*dy;let t=l?((px-x1)*dx+(py-y1)*dy)/l:0;t=clamp(t,0,1);
+  return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+}
+
+/* ---------- UI ---------- */
+function select(id){state.sel=id;renderInfo();renderParts();draw();}
+function renderInfo(){
+  const c=META.find(m=>m.id===state.sel),el=$('#info');
+  if(!c){el.innerHTML='<h2>Select a part</h2><p class="muted" style="margin:0">Click any part in the view or in the list below to see its dimensions and how well they are supported.</p>';return;}
+  el.innerHTML='<h2>'+c.name+'</h2><span class="chip '+c.conf+'">'+(c.conf==='meas'?'from your measurements':'assumed / placeholder')+'</span><dl>'+
+    c.info.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+' mm<small>'+r[2]+'</small></dd>').join('')+'</dl>';
+}
+function renderParts(){
+  $('#parts').innerHTML='';
+  META.forEach(m=>{
+    const row=document.createElement('div');row.className='part';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!state.hidden.has(m.id);
+    cb.addEventListener('change',()=>{cb.checked?state.hidden.delete(m.id):state.hidden.add(m.id);draw();});
+    const sw=document.createElement('i');sw.className='sw'+(m.conf==='assumed'?' d':'');sw.style.width='18px';
+    const b=document.createElement('button');b.textContent=m.name;if(state.sel===m.id)b.className='on';
+    b.addEventListener('click',()=>select(m.id));
+    row.append(cb,sw,b);$('#parts').append(row);
+  });
+}
+function setViewActive(v){document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));}
+function setPoseActive(p){document.querySelectorAll('[data-pose]').forEach(b=>b.classList.toggle('on',b.dataset.pose===p));}
+const VIEWS={A:{az:0,el:0},B:{az:-Math.PI/2,el:0},T:{az:0,el:Math.PI/2},'3D':{az:-0.55,el:0.3}};
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
+  Object.assign(cam,VIEWS[b.dataset.view],{zoom:1});setViewActive(b.dataset.view);draw();}));
+const POSES={f3:{yaw:0,u:131,f:250},f4:{yaw:0,u:65,f:154},f1:{yaw:0,u:125,f:199},f2:{yaw:90,u:90,f:270}};
+function syncSliders(){
+  $('#sYaw').value=state.yaw;$('#sU').value=state.u;$('#sF').value=state.f;
+  $('#vYaw').textContent=state.yaw+'°';$('#vU').textContent=state.u+'°';$('#vF').textContent=state.f+'°';
+}
+function applyPose(p){Object.assign(state,POSES[p]);syncSliders();comps=build();setPoseActive(p);draw();}
+document.querySelectorAll('[data-pose]').forEach(b=>b.addEventListener('click',()=>applyPose(b.dataset.pose)));
+[['sYaw','yaw'],['sU','u'],['sF','f']].forEach(([id,k])=>$('#'+id).addEventListener('input',e=>{
+  state[k]=+e.target.value;syncSliders();comps=build();setPoseActive(null);draw();}));
+$('#showAssumed').addEventListener('change',e=>{state.showAssumed=e.target.checked;draw();});
+
+/* ---------- measurement table ---------- */
+const ROWS=[
+ ['Scale & reference'],
+ ['Scale, all frames','3.19 px/mm','5','78–81 px per 25 mm','mean of five hole-pitch clicks, applied to every frame'],
+ ['Plate (nominal)','200 × 200 × 12.7','—','—','assumed; front edge reads 206.8 raw because it is nearer the camera'],
+ ['Base & mounting'],
+ ['Robot axis on plate','125 from left edge','1','—','centre of a 25 mm hole square; depth position assumed centred'],
+ ['Mounting counterbore Ø','10.3','1','—','likely M6 socket-head counterbore'],
+ ['Base puck Ø × height','38.2 × 16.2','1 / 3','height 14.4–17.9','height depends on where the plate surface was clicked'],
+ ['Bearing flange thickness','4.6','3','4.1–5.0',''],
+ ['Turret'],
+ ['Turret width X (side A)','61.6','2','60.1–63.0',''],
+ ['Turret width Y (side B)','39.8','1','—','top plate in frame 2'],
+ ['Turret base plate thickness','5.7','3','5.0–6.0',''],
+ ['Turret clear height','33.7','3','33.5–34.2','plus plate = 39.4; your frame-1 full height reads 39.2'],
+ ['Yaw actuator Ø × height','30.4 × 21.1','1 / 2','height 21.0–21.3',''],
+ ['Vertical bracket height','90.2','2','89.6–90.9','frame 1 value (76.8) excluded'],
+ ['Shoulder axis height','94.8','2','94.6–94.9','above plate surface'],
+ ['Joints'],
+ ['Joint ring Ø','62.4','4','56.8–65.2','same size as turret width'],
+ ['Hub Ø','27.0','2','26.4–27.6',''],
+ ['Bolt-circle Ø','37.6','2','37.0–38.2',''],
+ ['Bolt-head Ø','5.5 and 6.8','3','—','matches M3 (5.5) and M4 (7.0) socket heads — your two screw variants'],
+ ['Motor length along axis','40.1','1','—','elbow, frame 2'],
+ ['Hub length (elbow)','18.5','1','—','frame 2'],
+ ['Links'],
+ ['Link plate thickness','4.7','2','4.7–4.7','both from frame 2, edge-on'],
+ ['Link width','27.1','1','—',''],
+ ['Upper arm, shoulder → elbow','99.4','2','98.6–100.2','frames 1 and 3'],
+ ['Forearm, elbow → tip','103.8','2','103.5–104.1','frames 1 and 4'],
+ ['Upper arm slot length','65.7','3','63.3–69.0',''],
+ ['Forearm slot length','61.7','2','60.5–63.0','frame 3 value (79.5) excluded: line starts at the pivot'],
+ ['Slot width','5.1','3','4.9–5.3',''],
+ ['Tip hole Ø','12.9','2','12.9–12.9',''],
+ ['Poses (angle from +X, counter-clockwise)'],
+ ['Frame 1 — upper / forearm','125° / 199°','','',''],
+ ['Frame 3 — upper / forearm','131° / 250°','','',''],
+ ['Frame 4 — upper / forearm','65° / 154°','','',''],
+ ['Frame 2 — upper / forearm','~90° / ~270°','','','folded back down; read by eye, base yawed 90° from the others']
+];
+$('#tbl').innerHTML='<tr><th>Feature</th><th>Value</th><th>n</th><th>Range</th><th>Note</th></tr>'+
+  ROWS.map(r=>r.length===1?'<tr class="grp"><td colspan="5">'+r[0]+'</td></tr>':
+  '<tr><td>'+r[0]+'</td><td class="n"><b>'+r[1]+'</b></td><td class="n">'+r[2]+'</td><td class="n">'+r[3]+'</td><td class="muted">'+r[4]+'</td></tr>').join('');
+
+/* ---------- init ---------- */
+renderInfo();renderParts();syncSliders();setViewActive('3D');setPoseActive('f3');
+window.addEventListener('resize',resize);
+if(window.ResizeObserver)new ResizeObserver(resize).observe(cv);
+if(window.matchMedia)window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+resize();
+})();
+</script>
+</body>
+</html>
