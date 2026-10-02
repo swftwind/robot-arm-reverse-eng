@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Export the Checkpoint 1 block model as CAD: one STEP + one STL per part, plus a
 STEP assembly (part names + colours preserved) that opens in SolidWorks / Onshape / Fusion.
